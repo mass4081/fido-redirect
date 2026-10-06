@@ -54,7 +54,7 @@
   <h2>パスキー認証</h2>
 
   <p>
-    <strong>Redirect Page v1.0.8</strong>
+    <strong>Redirect Page v1.0.9</strong>
   </p>
 
   <p>FIDO認証用QRコード</p>
@@ -78,7 +78,20 @@
   </script>
 
   <script>
-    const VERSION = "v1.0.8";
+    const VERSION = "v1.0.9";
+
+    /*
+     * 画面に表示するQRサイズ
+     */
+    const QR_SIZE = 320;
+
+    /*
+     * Binary Eyeへ共有する画像サイズ
+     *
+     * 800x800の白い画像の中央に
+     * 320x320のQRを配置する。
+     */
+    const SHARE_IMAGE_SIZE = 800;
 
     const qrArea =
       document.getElementById("qrcode");
@@ -95,8 +108,7 @@
     let qrFile = null;
 
     /*
-     * URLの # 以降から
-     * FIDO URIを取得
+     * URLの # 以降からFIDO URIを取得
      */
     let fido = location.hash.substring(1);
 
@@ -125,8 +137,8 @@
        */
       new QRCode(qrArea, {
         text: fido,
-        width: 320,
-        height: 320,
+        width: QR_SIZE,
+        height: QR_SIZE,
         correctLevel: QRCode.CorrectLevel.M
       });
 
@@ -137,28 +149,121 @@
         "VERSION: " + VERSION + "\n" +
         "FIDO: OK\n" +
         "QR: OK\n" +
-        "PNG生成中...";
+        "共有画像生成中...";
 
       /*
-       * QRCode.jsによる描画完了を少し待つ
+       * QRCode.jsの描画完了を待つ
        */
-      setTimeout(createQrFile, 300);
+      setTimeout(createShareImage, 300);
     }
 
     /*
-     * QRコードをPNGファイルへ変換
+     * 余白付き共有画像を作成
      */
-    function createQrFile() {
+    function createShareImage() {
 
-      const canvas =
+      const sourceCanvas =
         qrArea.querySelector("canvas");
 
-      const image =
+      const sourceImage =
         qrArea.querySelector("img");
 
-      if (canvas) {
+      /*
+       * 800x800の共有専用Canvas
+       */
+      const shareCanvas =
+        document.createElement("canvas");
 
-        canvas.toBlob(function(blob) {
+      shareCanvas.width =
+        SHARE_IMAGE_SIZE;
+
+      shareCanvas.height =
+        SHARE_IMAGE_SIZE;
+
+      const ctx =
+        shareCanvas.getContext("2d");
+
+      /*
+       * 背景を完全な白にする
+       */
+      ctx.fillStyle = "#ffffff";
+
+      ctx.fillRect(
+        0,
+        0,
+        SHARE_IMAGE_SIZE,
+        SHARE_IMAGE_SIZE
+      );
+
+      /*
+       * QRを中央へ配置
+       *
+       * (800 - 320) / 2 = 240px
+       *
+       * 上下左右それぞれ240pxの
+       * 白い余白ができる。
+       */
+      const offset =
+        (SHARE_IMAGE_SIZE - QR_SIZE) / 2;
+
+      if (sourceCanvas) {
+
+        ctx.drawImage(
+          sourceCanvas,
+          offset,
+          offset,
+          QR_SIZE,
+          QR_SIZE
+        );
+
+        createFileFromCanvas(
+          shareCanvas
+        );
+
+        return;
+      }
+
+      /*
+       * QRCode.jsがIMGを生成した場合
+       */
+      if (sourceImage && sourceImage.src) {
+
+        const img = new Image();
+
+        img.onload = function() {
+
+          ctx.drawImage(
+            img,
+            offset,
+            offset,
+            QR_SIZE,
+            QR_SIZE
+          );
+
+          createFileFromCanvas(
+            shareCanvas
+          );
+        };
+
+        img.onerror = function() {
+          qrCreateFailed();
+        };
+
+        img.src = sourceImage.src;
+
+        return;
+      }
+
+      qrCreateFailed();
+    }
+
+    /*
+     * Canvas → PNG → File
+     */
+    function createFileFromCanvas(canvas) {
+
+      canvas.toBlob(
+        function(blob) {
 
           if (!blob) {
             qrCreateFailed();
@@ -167,30 +272,9 @@
 
           prepareShare(blob);
 
-        }, "image/png");
-
-        return;
-      }
-
-      /*
-       * 環境によってQRCode.jsが
-       * IMGを生成した場合
-       */
-      if (image && image.src) {
-
-        fetch(image.src)
-          .then(response => response.blob())
-          .then(blob => {
-            prepareShare(blob);
-          })
-          .catch(() => {
-            qrCreateFailed();
-          });
-
-        return;
-      }
-
-      qrCreateFailed();
+        },
+        "image/png"
+      );
     }
 
     /*
@@ -206,9 +290,6 @@
         }
       );
 
-      /*
-       * Web Share APIが存在するか確認
-       */
       if (!navigator.share) {
 
         status.textContent =
@@ -220,9 +301,6 @@
         return;
       }
 
-      /*
-       * ファイル共有対応確認
-       */
       if (
         navigator.canShare &&
         !navigator.canShare({
@@ -250,6 +328,9 @@
         "FIDO: OK\n" +
         "QR: OK\n" +
         "PNG: OK\n" +
+        "IMAGE SIZE: 800x800\n" +
+        "QR SIZE: 320x320\n" +
+        "MARGIN: 240px\n" +
         "SHARE: READY";
     }
 
@@ -263,7 +344,6 @@
     }
 
     /*
-     * ユーザーがボタンを押した瞬間に
      * Android共有画面を表示
      */
     shareButton.addEventListener(
@@ -293,10 +373,6 @@
 
         } catch (e) {
 
-          /*
-           * 共有画面を閉じただけの場合も
-           * AbortErrorになる
-           */
           status.textContent =
             "共有処理を終了しました。";
 

@@ -4,47 +4,76 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>パスキー認証</title>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+
+    #qrcode {
+      margin: 20px auto;
+      width: 320px;
+      min-height: 320px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #status {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 
 <body>
+
   <h2>パスキー認証</h2>
 
-  <p><strong>Redirect Page v1.0.6</strong></p>
+  <p><strong>Redirect Page v1.0.7</strong></p>
 
-  <p>
-    今回はBinary Eyeをブラウザから起動できるかだけテストします。
-  </p>
+  <p>FIDO認証用QRコード</p>
 
-  <p>
-    <a
-      id="binaryEyeButton"
-      href="binaryeye://scan"
-      style="
-        display:inline-block;
-        padding:16px 24px;
-        background:#1976d2;
-        color:white;
-        text-decoration:none;
-        border-radius:8px;
-        font-size:18px;
-      "
-    >
-      Binary Eyeを起動
-    </a>
-  </p>
+  <div id="qrcode"></div>
 
-  <hr>
+  <p id="status">認証情報を確認しています...</p>
 
-  <p><strong>テスト内容</strong></p>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
-  <pre>
-VERSION: v1.0.6
+  <script>
+    const VERSION = "v1.0.7";
 
-起動URI:
-binaryeye://scan
+    const status = document.getElementById("status");
+    const qrArea = document.getElementById("qrcode");
 
-※今回はFIDO認証自体は実行しません。
-  </pre>
+    let fido = location.hash.substring(1);
+
+    try {
+      fido = decodeURIComponent(fido);
+    } catch (e) {
+      // デコードできない場合はそのまま使用
+    }
+
+    if (!/^fido:\//i.test(fido)) {
+
+      status.textContent =
+        "FIDO認証情報がありません。";
+
+    } else {
+
+      new QRCode(qrArea, {
+        text: fido,
+        width: 320,
+        height: 320,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      status.textContent =
+        "FIDO QRコードを生成しました。";
+    }
+  </script>
 
 </body>
 </html>

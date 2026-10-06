@@ -9,9 +9,9 @@
 <body>
   <h2>パスキー認証</h2>
 
-  <p><strong>Redirect Page v1.0.3</strong></p>
+  <p><strong>Redirect Page v1.0.4</strong></p>
 
-  <p>診断用ページです。</p>
+  <p>下のボタンを押してください。</p>
 
   <p>
     <button
@@ -26,13 +26,11 @@
         font-size: 18px;
       "
     >
-      診断開始
+      認証を開始
     </button>
   </p>
 
-  <hr>
-
-  <p><strong>診断結果</strong></p>
+  <p id="status">認証情報を確認しています...</p>
 
   <pre
     id="result"
@@ -42,62 +40,36 @@
       background: #eeeeee;
       padding: 12px;
     "
-  >待機中...</pre>
+  ></pre>
 
   <script>
-    const VERSION = "v1.0.3";
+    const VERSION = "v1.0.4";
 
     const button = document.getElementById("startButton");
+    const status = document.getElementById("status");
     const result = document.getElementById("result");
 
-    function mask(value) {
-      if (!value) {
-        return "(なし)";
-      }
+    let fido = location.hash.substring(1);
 
-      if (value.length <= 20) {
-        return value;
-      }
+    try {
+      fido = decodeURIComponent(fido);
+    } catch (e) {
+      // デコードできない場合はそのまま使用
+    }
 
-      return (
-        value.substring(0, 12) +
-        "..." +
-        value.substring(value.length - 8)
-      );
+    if (!/^fido:\//i.test(fido)) {
+      status.textContent = "FIDO認証情報がありません。";
+      button.disabled = true;
+    } else {
+      status.textContent = "認証情報を受信しました。";
     }
 
     button.addEventListener("click", function () {
-      let output = "";
-
-      output += "VERSION: " + VERSION + "\n";
-      output += "CLICK: OK\n";
-      output += "USER_AGENT: " + navigator.userAgent + "\n\n";
-
-      const rawHash = location.hash;
-
-      output += "HASH EXISTS: ";
-      output += rawHash.length > 1 ? "YES" : "NO";
-      output += "\n";
-
-      let fido = rawHash.substring(1);
-
-      try {
-        fido = decodeURIComponent(fido);
-        output += "DECODE: OK\n";
-      } catch (e) {
-        output += "DECODE: FAILED\n";
-      }
-
-      output += "FIDO PREFIX: ";
-      output += /^fido:\//i.test(fido) ? "OK" : "NG";
-      output += "\n";
-
-      output += "FIDO LENGTH: " + fido.length + "\n";
-      output += "FIDO MASKED: " + mask(fido) + "\n\n";
 
       if (!/^fido:\//i.test(fido)) {
-        output += "RESULT: FIDO URIが取得できていません。\n";
-        result.textContent = output;
+        result.textContent =
+          "VERSION: " + VERSION + "\n" +
+          "FIDO: NG";
         return;
       }
 
@@ -108,14 +80,18 @@
         payload +
         "#Intent;scheme=fido;end";
 
-      output += "INTENT CREATED: YES\n";
-      output += "INTENT LENGTH: " + intentUrl.length + "\n";
-      output += "INTENT MASKED: " + mask(intentUrl) + "\n\n";
+      /*
+       * クリックイベントの中で直接実行する。
+       * Android Chromeにユーザー操作として認識させるため。
+       */
+      result.textContent =
+        "VERSION: " + VERSION + "\n" +
+        "CLICK: OK\n" +
+        "FIDO: OK\n" +
+        "INTENT: CREATED\n" +
+        "INTENTを起動します...";
 
-      output += "RESULT: 診断完了\n";
-      output += "※このv1.0.3では意図的にFIDOを起動しません。";
-
-      result.textContent = output;
+      window.location.href = intentUrl;
     });
   </script>
 </body>

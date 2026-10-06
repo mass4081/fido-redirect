@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <title>パスキー認証</title>
 
   <style>
@@ -21,9 +22,29 @@
       align-items: center;
     }
 
+    #shareButton {
+      display: none;
+      padding: 16px 24px;
+      background: #1976d2;
+      color: white;
+      border: 0;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
     #status {
-      margin-top: 15px;
+      margin-top: 18px;
       font-weight: bold;
+    }
+
+    #detail {
+      margin-top: 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      text-align: left;
+      background: #eeeeee;
+      padding: 12px;
     }
   </style>
 </head>
@@ -32,22 +53,51 @@
 
   <h2>パスキー認証</h2>
 
-  <p><strong>Redirect Page v1.0.7</strong></p>
+  <p>
+    <strong>Redirect Page v1.0.8</strong>
+  </p>
 
   <p>FIDO認証用QRコード</p>
 
   <div id="qrcode"></div>
 
-  <p id="status">認証情報を確認しています...</p>
+  <p>
+    <button id="shareButton" type="button">
+      Binary Eyeへ送る
+    </button>
+  </p>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <p id="status">
+    認証情報を確認しています...
+  </p>
+
+  <pre id="detail"></pre>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js">
+  </script>
 
   <script>
-    const VERSION = "v1.0.7";
+    const VERSION = "v1.0.8";
 
-    const status = document.getElementById("status");
-    const qrArea = document.getElementById("qrcode");
+    const qrArea =
+      document.getElementById("qrcode");
 
+    const shareButton =
+      document.getElementById("shareButton");
+
+    const status =
+      document.getElementById("status");
+
+    const detail =
+      document.getElementById("detail");
+
+    let qrFile = null;
+
+    /*
+     * URLの # 以降から
+     * FIDO URIを取得
+     */
     let fido = location.hash.substring(1);
 
     try {
@@ -56,13 +106,23 @@
       // デコードできない場合はそのまま使用
     }
 
+    /*
+     * FIDOデータ確認
+     */
     if (!/^fido:\//i.test(fido)) {
 
       status.textContent =
         "FIDO認証情報がありません。";
 
+      detail.textContent =
+        "VERSION: " + VERSION + "\n" +
+        "FIDO: NG";
+
     } else {
 
+      /*
+       * QRコード生成
+       */
       new QRCode(qrArea, {
         text: fido,
         width: 320,
@@ -71,8 +131,181 @@
       });
 
       status.textContent =
-        "FIDO QRコードを生成しました。";
+        "QRコードを生成しました。";
+
+      detail.textContent =
+        "VERSION: " + VERSION + "\n" +
+        "FIDO: OK\n" +
+        "QR: OK\n" +
+        "PNG生成中...";
+
+      /*
+       * QRCode.jsによる描画完了を少し待つ
+       */
+      setTimeout(createQrFile, 300);
     }
+
+    /*
+     * QRコードをPNGファイルへ変換
+     */
+    function createQrFile() {
+
+      const canvas =
+        qrArea.querySelector("canvas");
+
+      const image =
+        qrArea.querySelector("img");
+
+      if (canvas) {
+
+        canvas.toBlob(function(blob) {
+
+          if (!blob) {
+            qrCreateFailed();
+            return;
+          }
+
+          prepareShare(blob);
+
+        }, "image/png");
+
+        return;
+      }
+
+      /*
+       * 環境によってQRCode.jsが
+       * IMGを生成した場合
+       */
+      if (image && image.src) {
+
+        fetch(image.src)
+          .then(response => response.blob())
+          .then(blob => {
+            prepareShare(blob);
+          })
+          .catch(() => {
+            qrCreateFailed();
+          });
+
+        return;
+      }
+
+      qrCreateFailed();
+    }
+
+    /*
+     * Android共有用Fileを作成
+     */
+    function prepareShare(blob) {
+
+      qrFile = new File(
+        [blob],
+        "fido_qr.png",
+        {
+          type: "image/png"
+        }
+      );
+
+      /*
+       * Web Share APIが存在するか確認
+       */
+      if (!navigator.share) {
+
+        status.textContent =
+          "このブラウザは画像共有に対応していません。";
+
+        detail.textContent +=
+          "\nSHARE API: NG";
+
+        return;
+      }
+
+      /*
+       * ファイル共有対応確認
+       */
+      if (
+        navigator.canShare &&
+        !navigator.canShare({
+          files: [qrFile]
+        })
+      ) {
+
+        status.textContent =
+          "このブラウザではPNGファイルを共有できません。";
+
+        detail.textContent +=
+          "\nFILE SHARE: NG";
+
+        return;
+      }
+
+      shareButton.style.display =
+        "inline-block";
+
+      status.textContent =
+        "準備完了です。";
+
+      detail.textContent =
+        "VERSION: " + VERSION + "\n" +
+        "FIDO: OK\n" +
+        "QR: OK\n" +
+        "PNG: OK\n" +
+        "SHARE: READY";
+    }
+
+    function qrCreateFailed() {
+
+      status.textContent =
+        "QR画像の作成に失敗しました。";
+
+      detail.textContent +=
+        "\nPNG: NG";
+    }
+
+    /*
+     * ユーザーがボタンを押した瞬間に
+     * Android共有画面を表示
+     */
+    shareButton.addEventListener(
+      "click",
+      async function() {
+
+        if (!qrFile) {
+
+          status.textContent =
+            "QR画像がまだ準備できていません。";
+
+          return;
+        }
+
+        try {
+
+          status.textContent =
+            "共有画面を開きます...";
+
+          await navigator.share({
+            files: [qrFile],
+            title: "FIDO QR"
+          });
+
+          status.textContent =
+            "共有処理を実行しました。";
+
+        } catch (e) {
+
+          /*
+           * 共有画面を閉じただけの場合も
+           * AbortErrorになる
+           */
+          status.textContent =
+            "共有処理を終了しました。";
+
+          detail.textContent +=
+            "\nSHARE RESULT: " +
+            e.name;
+        }
+      }
+    );
   </script>
 
 </body>

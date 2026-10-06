@@ -2,26 +2,31 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>パスキー認証</title>
 </head>
+
 <body>
   <h2>パスキー認証</h2>
+
+  <p><strong>Redirect Page v1.0.2</strong></p>
 
   <p>下のボタンを押してください。</p>
 
   <p>
-    <a id="startButton"
-       href="#"
-       style="
-         display:inline-block;
-         padding:16px 24px;
-         background:#1976d2;
-         color:white;
-         text-decoration:none;
-         border-radius:8px;
-         font-size:18px;
-       ">
+    <a
+      id="startButton"
+      href="#"
+      style="
+        display: inline-block;
+        padding: 16px 24px;
+        background: #1976d2;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 18px;
+      "
+    >
       認証を開始
     </a>
   </p>
@@ -37,22 +42,23 @@
     try {
       fido = decodeURIComponent(fido);
     } catch (e) {
-      // デコードできない場合は元の値を使用
+      // デコードできない場合は、そのまま使用する
     }
 
     if (!/^fido:\//i.test(fido)) {
       status.textContent = "FIDO認証情報がありません。";
       button.style.display = "none";
     } else {
+      /*
+       * 受信例:
+       * FIDO:/123456789...
+       *
+       * Android Chrome用:
+       * intent:/123456789...#Intent;scheme=fido;end
+       */
+
       const payload = fido.replace(/^fido:\//i, "");
 
-      /*
-       * FIDO:/12345...
-       *
-       * ↓ Android Chrome Intent形式
-       *
-       * intent:/12345...#Intent;scheme=fido;end
-       */
       const intentUrl =
         "intent:/" +
         payload +

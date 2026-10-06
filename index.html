@@ -8,77 +8,43 @@
 
 <body>
   <h2>パスキー認証</h2>
-  <p><strong>Redirect Page v1.0.5</strong></p>
 
-  <p id="status">認証情報を確認しています...</p>
+  <p><strong>Redirect Page v1.0.6</strong></p>
 
   <p>
-    <a id="test1"
-       style="display:block;padding:16px;margin:12px 0;background:#ddd;">
-      TEST 1：FIDO直接
-    </a>
+    今回はBinary Eyeをブラウザから起動できるかだけテストします。
   </p>
 
   <p>
-    <a id="test2"
-       style="display:block;padding:16px;margin:12px 0;background:#ddd;">
-      TEST 2：Intent /
+    <a
+      id="binaryEyeButton"
+      href="binaryeye://scan"
+      style="
+        display:inline-block;
+        padding:16px 24px;
+        background:#1976d2;
+        color:white;
+        text-decoration:none;
+        border-radius:8px;
+        font-size:18px;
+      "
+    >
+      Binary Eyeを起動
     </a>
   </p>
 
-  <p>
-    <a id="test3"
-       style="display:block;padding:16px;margin:12px 0;background:#ddd;">
-      TEST 3：Intent //
-    </a>
-  </p>
+  <hr>
 
-  <pre id="result"></pre>
+  <p><strong>テスト内容</strong></p>
 
-  <script>
-    const VERSION = "v1.0.5";
+  <pre>
+VERSION: v1.0.6
 
-    const status = document.getElementById("status");
-    const result = document.getElementById("result");
+起動URI:
+binaryeye://scan
 
-    let fido = location.hash.substring(1);
+※今回はFIDO認証自体は実行しません。
+  </pre>
 
-    try {
-      fido = decodeURIComponent(fido);
-    } catch (e) {
-    }
-
-    if (!/^fido:\//i.test(fido)) {
-      status.textContent = "FIDO認証情報がありません。";
-    } else {
-
-      const payload = fido.replace(/^fido:\//i, "");
-
-      const directUrl =
-        fido;
-
-      const intent1 =
-        "intent:/" +
-        payload +
-        "#Intent;scheme=fido;end";
-
-      const intent2 =
-        "intent://" +
-        payload +
-        "#Intent;scheme=fido;end";
-
-      document.getElementById("test1").href = directUrl;
-      document.getElementById("test2").href = intent1;
-      document.getElementById("test3").href = intent2;
-
-      status.textContent =
-        "FIDO認証情報を受信しました。";
-
-      result.textContent =
-        "VERSION: " + VERSION + "\n" +
-        "FIDO: OK\n" +
-        "3方式をテストできます。";
-    }
-  </script>
 </body>
 </html>

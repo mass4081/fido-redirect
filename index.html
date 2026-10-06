@@ -8,12 +8,10 @@
 <body>
   <h2>パスキー認証</h2>
 
-  <p>
-    下のボタンを押してください。
-  </p>
+  <p>下のボタンを押してください。</p>
 
   <p>
-    <a id="fidoLink"
+    <a id="startButton"
        href="#"
        style="
          display:inline-block;
@@ -28,33 +26,40 @@
     </a>
   </p>
 
-  <p id="status"></p>
+  <p id="status">認証情報を確認しています...</p>
 
   <script>
+    const button = document.getElementById("startButton");
     const status = document.getElementById("status");
-    const link = document.getElementById("fidoLink");
 
     let fido = location.hash.substring(1);
 
     try {
       fido = decodeURIComponent(fido);
     } catch (e) {
-      // そのまま使用
+      // デコードできない場合は元の値を使用
     }
 
-    if (!fido.toLowerCase().startsWith("fido:/")) {
+    if (!/^fido:\//i.test(fido)) {
       status.textContent = "FIDO認証情報がありません。";
-      link.style.display = "none";
+      button.style.display = "none";
     } else {
+      const payload = fido.replace(/^fido:\//i, "");
+
       /*
-       * JavaScriptの location.href ではなく、
-       * 実際の <a href="fido:/..."> を生成する。
+       * FIDO:/12345...
        *
-       * Android Chromeから見れば、
-       * ユーザーが明示的にカスタムURIリンクを
-       * タップした形になる。
+       * ↓ Android Chrome Intent形式
+       *
+       * intent:/12345...#Intent;scheme=fido;end
        */
-      link.href = fido;
+      const intentUrl =
+        "intent:/" +
+        payload +
+        "#Intent;scheme=fido;end";
+
+      button.href = intentUrl;
+
       status.textContent = "認証情報を受信しました。";
     }
   </script>
